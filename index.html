@@ -1512,8 +1512,8 @@
             },
             openTransaction(customerId, type, editTx) {
                 const isEdit = !!editTx;
-                const title = isEdit ? 'Edit Transaction' : (type === 'credit' ? 'Add Credit (Items Taken)' : 'Add Payment (Amount Paid)');
-                const btnText = isEdit ? 'Save Changes' : (type === 'credit' ? 'Add Credit' : 'Record Payment');
+                const title = isEdit ? 'Edit Transaction' : (type === 'credit' ? 'Add Items Taken' : 'Amount Paid');
+                const btnText = isEdit ? 'Save Changes' : (type === 'credit' ? 'Add Items Taken' : 'Record Amount Payment');
                 const btnClass = type === 'credit' ? 'btn-danger' : 'btn-success';
                 const txType = isEdit ? editTx.type : type;
                 this.open(`
@@ -1992,10 +1992,10 @@
                     </div>
                     <div class="detail-actions">
                         <button class="btn btn-danger btn-sm" onclick="Modal.openTransaction('${customer.id}', 'credit')">
-                            <i class="fas fa-plus"></i> Add Credit
+                            <i class="fas fa-plus"></i> Add Items Taken
                         </button>
                         <button class="btn btn-success btn-sm" onclick="Modal.openTransaction('${customer.id}', 'payment')">
-                            <i class="fas fa-indian-rupee-sign"></i> Record Payment
+                            <i class="fas fa-indian-rupee-sign"></i> Record Amount Paid
                         </button>
                         <button class="btn btn-outline btn-sm" onclick="Modal.openAddCustomer('${customer.id}')">
                             <i class="fas fa-edit"></i> Edit
