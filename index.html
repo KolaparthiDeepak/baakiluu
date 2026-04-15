@@ -1045,42 +1045,71 @@
 
     <script>
         /* =========================================================
-           STORAGE SERVICE
+           STORAGE SERVICE (server-backed)
            ========================================================= */
-        const STORAGE_KEY = 'baakiluu_data';
+        const STORAGE_ENDPOINT = '/api/dump';
 
         const StorageService = {
             getDefault() {
                 return { version: 2, customers: [], suppliers: [], settings: { theme: 'light' } };
             },
-            load() {
+            async load() {
                 try {
-                    const raw = localStorage.getItem(STORAGE_KEY);
-                    if (!raw) return this.getDefault();
-                    const data = JSON.parse(raw);
-                    if (!data.customers) return this.getDefault();
-                    // Migration: add suppliers array if missing
+                    const res = await fetch(STORAGE_ENDPOINT);
+                    if (!res.ok) return this.getDefault();
+                    const body = await res.json();
+                    if (!body || !body.data) return this.getDefault();
+                    const data = body.data;
+                    if (!data.customers) data.customers = [];
                     if (!data.suppliers) data.suppliers = [];
                     if (!data.version || data.version < 2) data.version = 2;
+                    if (!data.settings) data.settings = { theme: 'light' };
                     return data;
-                } catch { return this.getDefault(); }
+                } catch (err) {
+                    // Fallback to default if server not reachable
+                    return this.getDefault();
+                }
             },
-            save(data) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            async save(data) {
+                try {
+                    await fetch(STORAGE_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                } catch (err) {
+                    // Ignore save failures for now; could queue/retry later
+                    console.error('Failed to save data to server', err);
+                }
             },
             generateId() {
-                return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+                return crypto && crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).substr(2, 9));
             }
         };
 
         /* =========================================================
-           APP STATE
+           APP STATE (will be initialized asynchronously)
            ========================================================= */
-        let DATA = StorageService.load();
+        let DATA = null;
 
         function saveData() {
+            // Fire-and-forget save; UI doesn't await network
+            if (!DATA) return;
             StorageService.save(DATA);
         }
+
+        async function bootstrap() {
+            DATA = await StorageService.load();
+            // Ensure shape
+            if (!DATA.settings) DATA.settings = { theme: 'light' };
+            // Expose a synchronous default while the app uses DATA
+            // Render the initial UI after data is ready
+            App.init();
+            Router.render();
+        }
+
+        // Start the app once the script has loaded
+        bootstrap();
 
         /* =========================================================
            CUSTOMER SERVICE
@@ -1802,12 +1831,12 @@
                     <div class="stat-card">
                         <div class="stat-icon red"><i class="fas fa-arrow-down"></i></div>
                         <div class="stat-value">${formatCurrency(totalOutstanding)}</div>
-                        <div class="stat-label">Receivable (Customers Owe You)</div>
+                        <div class="stat-label">Receivable (Customers need to give You)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon blue"><i class="fas fa-arrow-up"></i></div>
                         <div class="stat-value">${formatCurrency(totalPayable)}</div>
-                        <div class="stat-label">Payable (You Owe Suppliers)</div>
+                        <div class="stat-label">Payable (You need to give to Suppliers)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon ${totalOutstanding - totalPayable >= 0 ? 'green' : 'yellow'}"><i class="fas fa-scale-balanced"></i></div>
@@ -2010,7 +2039,6 @@
                                 <td><span class="tx-type-badge ${tx.type}"><i class="fas ${tx.type === 'credit' ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${tx.type === 'credit' ? 'Credit' : 'Payment'}</span></td>
                                 <td class="${tx.type === 'credit' ? 'tx-credit' : 'tx-payment'}">${tx.type === 'credit' ? '+' : '-'}${formatCurrency(tx.amount)}</td>
                                 <td style="color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(tx.notes)}">${escapeHtml(tx.notes) || '—'}</td>
-                                <td><strong style="color:${runningBalance > 0 ? 'var(--credit-color)' : 'var(--payment-color)'}">${formatCurrency(runningBalance)}</strong></td>
                                 <td>
                                     <div class="tx-actions">
                                         <button title="Edit" onclick="event.stopPropagation(); Views.editTransaction('${customer.id}', '${tx.id}')"><i class="fas fa-pen"></i></button>
@@ -2237,7 +2265,6 @@
                                 <td><span class="tx-type-badge ${typeBadge}"><i class="fas ${tx.type === 'purchase' ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${typeLabel}</span></td>
                                 <td class="${amtClass}">${tx.type === 'purchase' ? '+' : '-'}${formatCurrency(tx.amount)}</td>
                                 <td style="color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(tx.notes)}">${escapeHtml(tx.notes) || '—'}</td>
-                                <td><strong style="color:${runningBalance > 0 ? 'var(--credit-color)' : 'var(--payment-color)'}">${formatCurrency(runningBalance)}</strong></td>
                                 <td>
                                     <div class="tx-actions">
                                         <button title="Edit" onclick="event.stopPropagation(); Views.editSupplierTransaction('${supplier.id}', '${tx.id}')"><i class="fas fa-pen"></i></button>
@@ -2506,8 +2533,4 @@
     </script>
 </body>
 </html>
-
-
-
-
 
