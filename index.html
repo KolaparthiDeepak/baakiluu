@@ -1,0 +1,2513 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baakiluu - Shopkeeper Credit Book</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* ===========================
+           CSS CUSTOM PROPERTIES
+           =========================== */
+        :root {
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        [data-theme="light"] {
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --surface-hover: #f8f9fa;
+            --text: #1a1a2e;
+            --text-secondary: #6c757d;
+            --primary: #4361ee;
+            --primary-hover: #3a56d4;
+            --primary-light: #eef0ff;
+            --danger: #e63946;
+            --danger-hover: #cc2f3b;
+            --danger-light: #ffebed;
+            --success: #2d6a4f;
+            --success-light: #e8f5e9;
+            --warning: #e9a820;
+            --warning-light: #fff8e1;
+            --border: #dee2e6;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --modal-backdrop: rgba(0,0,0,0.5);
+            --credit-color: #e63946;
+            --payment-color: #2d6a4f;
+        }
+        [data-theme="dark"] {
+            --bg: #0f0f1a;
+            --surface: #1a1a2e;
+            --surface-hover: #22223a;
+            --text: #e8e8e8;
+            --text-secondary: #a0a0b0;
+            --primary: #6c83f7;
+            --primary-hover: #5a72e5;
+            --primary-light: #1e2240;
+            --danger: #ff6b6b;
+            --danger-hover: #ee5a5a;
+            --danger-light: #2e1a1a;
+            --success: #52b788;
+            --success-light: #1a2e22;
+            --warning: #ffd166;
+            --warning-light: #2e2a1a;
+            --border: #2e2e4a;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4);
+            --modal-backdrop: rgba(0,0,0,0.7);
+            --credit-color: #ff6b6b;
+            --payment-color: #52b788;
+        }
+
+        /* ===========================
+           RESET & BASE
+           =========================== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+        a { color: var(--primary); text-decoration: none; }
+        input, select, textarea, button { font-family: inherit; font-size: inherit; }
+
+        /* ===========================
+           APP LAYOUT
+           =========================== */
+        .app-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            grid-template-rows: 60px 1fr;
+            min-height: 100vh;
+        }
+
+        /* HEADER */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+        }
+        .hamburger:hover { background: var(--surface-hover); }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+        .logo i { margin-right: 6px; }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        .theme-toggle:hover { background: var(--surface-hover); border-color: var(--primary); }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 16px 0;
+            overflow-y: auto;
+            transition: left 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* When layout is collapsed (JS adds this class to body) */
+        body.sidebar-collapsed .app-layout {
+            grid-template-columns: 1fr;
+        }
+        body.sidebar-collapsed .sidebar {
+            position: fixed;
+            left: -280px;
+            top: 60px;
+            bottom: 0;
+            width: 260px;
+            z-index: 150;
+            box-shadow: none;
+        }
+        body.sidebar-collapsed .sidebar.open {
+            left: 0;
+            box-shadow: var(--shadow-lg);
+        }
+        body.sidebar-collapsed .hamburger {
+            display: flex;
+        }
+
+        /* Sidebar backdrop — always fixed, never in grid */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            top: 60px;
+            background: rgba(0,0,0,0.3);
+            z-index: 140;
+        }
+        .sidebar-backdrop.show { display: block; }
+        .sidebar-nav { list-style: none; }
+        .sidebar-nav li a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-nav li a:hover {
+            background: var(--surface-hover);
+            color: var(--text);
+        }
+        .sidebar-nav li a.active {
+            color: var(--primary);
+            background: var(--primary-light);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+        .sidebar-nav li a i { width: 20px; text-align: center; }
+        .sidebar-divider {
+            padding: 16px 24px 6px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        /* MAIN */
+        .main-content {
+            padding: 28px 32px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+        }
+        .main-content > .view {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* ===========================
+           VIEWS (hidden by default)
+           =========================== */
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ===========================
+           DASHBOARD
+           =========================== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .stat-card .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+        }
+        .stat-card .stat-icon.red { background: var(--danger-light); color: var(--danger); }
+        .stat-card .stat-icon.green { background: var(--success-light); color: var(--success); }
+        .stat-card .stat-icon.blue { background: var(--primary-light); color: var(--primary); }
+        .stat-card .stat-icon.yellow { background: var(--warning-light); color: var(--warning); }
+        .stat-card .stat-value { font-size: 1.8rem; font-weight: 800; margin-bottom: 4px; }
+        .stat-card .stat-label { color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title i { color: var(--primary); }
+
+        /* ===========================
+           CARDS / LIST
+           =========================== */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+        .search-box input {
+            width: 100%;
+            padding: 10px 12px 10px 38px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text);
+            outline: none;
+            transition: border 0.2s;
+        }
+        .search-box input:focus { border-color: var(--primary); }
+        .search-box input::placeholder { color: var(--text-secondary); }
+
+        select.sort-select {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            outline: none;
+        }
+        select.sort-select:focus { border-color: var(--primary); }
+
+        .customer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        .customer-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .customer-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+        .customer-card .cc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .customer-card .cc-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .customer-card .cc-phone {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 2px;
+        }
+        .customer-card .cc-phone i { margin-right: 4px; }
+        .customer-card .cc-balance {
+            font-size: 1.3rem;
+            font-weight: 800;
+            text-align: right;
+        }
+        .customer-card .cc-balance.has-balance { color: var(--credit-color); }
+        .customer-card .cc-balance.no-balance { color: var(--payment-color); }
+        .customer-card .cc-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge.overdue { background: var(--danger-light); color: var(--danger); }
+        .badge.clear { background: var(--success-light); color: var(--success); }
+
+        /* ===========================
+           CUSTOMER DETAIL
+           =========================== */
+        .detail-header {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+        .detail-header .dh-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .detail-header .dh-info h2 { font-size: 1.5rem; font-weight: 800; }
+        .detail-header .dh-info p { color: var(--text-secondary); margin-top: 4px; }
+        .detail-header .dh-info p i { margin-right: 6px; }
+        .detail-header .dh-balance {
+            text-align: right;
+        }
+        .detail-header .dh-balance .label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-header .dh-balance .amount { font-size: 2rem; font-weight: 800; }
+        .detail-header .dh-balance .amount.has-balance { color: var(--credit-color); }
+        .detail-header .dh-balance .amount.no-balance { color: var(--payment-color); }
+        .detail-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { color: var(--primary); }
+
+        /* TRANSACTION TABLE */
+        .table-container {
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table-container th {
+            background: var(--surface-hover);
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+        .table-container td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .table-container tr:last-child td { border-bottom: none; }
+        .table-container tr:hover td { background: var(--surface-hover); }
+        .tx-credit { color: var(--credit-color); font-weight: 700; }
+        .tx-payment { color: var(--payment-color); font-weight: 700; }
+        .tx-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .tx-type-badge.credit { background: var(--danger-light); color: var(--danger); }
+        .tx-type-badge.payment { background: var(--success-light); color: var(--success); }
+        .tx-type-badge.purchase { background: var(--primary-light); color: var(--primary); }
+        .tx-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .tx-actions button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+        .tx-actions button:hover { color: var(--primary); background: var(--primary-light); }
+        .tx-actions button.delete-btn:hover { color: var(--danger); background: var(--danger-light); }
+
+        /* ===========================
+           BUTTONS
+           =========================== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-outline:hover { background: var(--surface-hover); border-color: var(--primary); color: var(--primary); }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 8px 12px;
+        }
+        .btn-ghost:hover { background: var(--surface-hover); color: var(--text); }
+        .btn-sm { padding: 7px 14px; font-size: 0.82rem; }
+
+        .fab {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 50;
+        }
+        .fab:hover { background: var(--primary-hover); transform: scale(1.08); }
+
+        /* ===========================
+           MODAL
+           =========================== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--modal-backdrop);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-overlay.show { display: flex; animation: fadeInModal 0.2s ease; }
+        @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+        .modal {
+            background: var(--surface);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px 0;
+        }
+        .modal-header h3 { font-size: 1.15rem; font-weight: 700; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        .modal-close:hover { background: var(--surface-hover); color: var(--text); }
+        .modal-body { padding: 20px 24px; }
+        .modal-footer {
+            padding: 0 24px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* FORMS */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            transition: border 0.2s;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+        }
+        .form-group textarea { resize: vertical; min-height: 70px; }
+        .form-group .error-msg {
+            color: var(--danger);
+            font-size: 0.78rem;
+            margin-top: 4px;
+            display: none;
+        }
+        .form-group.has-error input,
+        .form-group.has-error textarea {
+            border-color: var(--danger);
+        }
+        .form-group.has-error .error-msg { display: block; }
+
+        /* ===========================
+           TOAST
+           =========================== */
+        .toast-container {
+            position: fixed;
+            top: 72px;
+            right: 20px;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 20px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            animation: slideInRight 0.3s ease;
+            min-width: 260px;
+        }
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.success i { color: var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
+        .toast.error i { color: var(--danger); }
+        .toast.info { border-left: 4px solid var(--primary); }
+        .toast.info i { color: var(--primary); }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ===========================
+           EMPTY STATE
+           =========================== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state h3 { font-size: 1.1rem; margin-bottom: 8px; color: var(--text); }
+        .empty-state p { font-size: 0.9rem; }
+
+        /* ===========================
+           SETTINGS
+           =========================== */
+        .settings-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .settings-section h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-section h3 i { color: var(--primary); }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-row .sr-label { font-weight: 500; }
+        .settings-row .sr-desc { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
+
+        /* Alert Banner */
+        .alert-banner {
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .alert-banner.warning { background: var(--warning-light); color: var(--warning); border: 1px solid var(--warning); }
+        .alert-banner.danger { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
+
+        /* Currency */
+        .currency::before { content: '₹'; }
+
+        /* Responsive table wrapper */
+        .table-responsive { overflow-x: auto; }
+
+        /* ===========================
+           RESPONSIVE (content only — sidebar is handled by JS)
+           =========================== */
+        @media (max-width: 768px) {
+            .main-content { padding: 16px 12px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .customer-grid { grid-template-columns: 1fr; }
+            .detail-header .dh-top { flex-direction: column; }
+            .detail-header .dh-balance { text-align: left; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .fab { bottom: 20px; right: 20px; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .main-content { padding: 12px 8px; }
+        }
+
+        /* ===========================
+           PRINT
+           =========================== */
+        @media print {
+            .header, .sidebar, .fab, .toast-container, .detail-actions, .tx-actions, .back-link, .toolbar { display: none !important; }
+            .app-layout { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+            .main-content { padding: 0; max-height: none; }
+            .view { display: block !important; }
+            .table-container { box-shadow: none; border: 1px solid #ccc; }
+            body { background: #fff; color: #000; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-left">
+                <button class="hamburger" id="hamburgerBtn" title="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo">
+                    <i class="fas fa-book-open"></i>Baakiluu
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- SIDEBAR -->
+        <nav class="sidebar" id="sidebar">
+            <ul class="sidebar-nav">
+                <li><a href="#/" data-nav="dashboard" class="active"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+                <li class="sidebar-divider"><span>Sales (Credit Out)</span></li>
+                <li><a href="#/customers" data-nav="customers"><i class="fas fa-users"></i> Customers</a></li>
+                <li class="sidebar-divider"><span>Purchases (Credit In)</span></li>
+                <li><a href="#/suppliers" data-nav="suppliers"><i class="fas fa-industry"></i> Suppliers</a></li>
+                <li class="sidebar-divider"><span>System</span></li>
+                <li><a href="#/settings" data-nav="settings"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content" id="mainContent">
+
+            <!-- DASHBOARD VIEW -->
+            <div class="view" id="view-dashboard">
+                <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:20px;">Dashboard</h1>
+                <div id="overdue-alert"></div>
+                <div class="stats-grid" id="stats-grid"></div>
+                <div class="section-title"><i class="fas fa-clock"></i> Recent Transactions</div>
+                <div class="table-container" id="recent-transactions-container">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Party</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-transactions-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="recent-empty" class="empty-state" style="display:none;">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No transactions yet</h3>
+                    <p>Add customers and record transactions to see them here.</p>
+                </div>
+            </div>
+
+            <!-- CUSTOMERS VIEW -->
+            <div class="view" id="view-customers">
+                <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:20px;">Customers</h1>
+                <div class="toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="customerSearch" placeholder="Search customers by name or phone...">
+                    </div>
+                    <select class="sort-select" id="customerSort">
+                        <option value="name-asc">Name A-Z</option>
+                        <option value="name-desc">Name Z-A</option>
+                        <option value="balance-desc">Highest Balance</option>
+                        <option value="balance-asc">Lowest Balance</option>
+                        <option value="recent">Most Recent</option>
+                        <option value="overdue">Overdue First</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="Modal.openAddCustomer()">
+                        <i class="fas fa-plus"></i> Add Customer
+                    </button>
+                </div>
+                <div class="customer-grid" id="customer-grid"></div>
+                <div id="customers-empty" class="empty-state" style="display:none;">
+                    <i class="fas fa-users"></i>
+                    <h3>No customers yet</h3>
+                    <p>Click the "Add Customer" button to add your first customer.</p>
+                </div>
+            </div>
+
+            <!-- CUSTOMER DETAIL VIEW -->
+            <div class="view" id="view-customer-detail">
+                <div class="back-link" onclick="window.location.hash='#/customers'">
+                    <i class="fas fa-arrow-left"></i> Back to Customers
+                </div>
+                <div class="detail-header" id="detail-header"></div>
+                <div class="section-title"><i class="fas fa-list"></i> Transaction History</div>
+                <div id="transaction-filter-bar" class="toolbar" style="margin-bottom:12px;">
+                    <select class="sort-select" id="txFilter">
+                        <option value="all">All Transactions</option>
+                        <option value="credit">Credits Only</option>
+                        <option value="payment">Payments Only</option>
+                    </select>
+                </div>
+                <div class="table-container" id="tx-table-container">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Notes</th>
+                                    <th>Balance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tx-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="tx-empty" class="empty-state" style="display:none;">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No transactions yet</h3>
+                    <p>Add a credit or payment to get started.</p>
+                </div>
+            </div>
+
+            <!-- SUPPLIERS VIEW -->
+            <div class="view" id="view-suppliers">
+                <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:20px;">Suppliers / Factories</h1>
+                <div class="toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="supplierSearch" placeholder="Search suppliers by name, phone or company...">
+                    </div>
+                    <select class="sort-select" id="supplierSort">
+                        <option value="name-asc">Name A-Z</option>
+                        <option value="name-desc">Name Z-A</option>
+                        <option value="balance-desc">Highest Payable</option>
+                        <option value="balance-asc">Lowest Payable</option>
+                        <option value="recent">Most Recent</option>
+                        <option value="overdue">Overdue First</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="Modal.openAddSupplier()">
+                        <i class="fas fa-plus"></i> Add Supplier
+                    </button>
+                </div>
+                <div class="customer-grid" id="supplier-grid"></div>
+                <div id="suppliers-empty" class="empty-state" style="display:none;">
+                    <i class="fas fa-industry"></i>
+                    <h3>No suppliers yet</h3>
+                    <p>Click "Add Supplier" to add your first factory / supplier.</p>
+                </div>
+            </div>
+
+            <!-- SUPPLIER DETAIL VIEW -->
+            <div class="view" id="view-supplier-detail">
+                <div class="back-link" onclick="window.location.hash='#/suppliers'">
+                    <i class="fas fa-arrow-left"></i> Back to Suppliers
+                </div>
+                <div class="detail-header" id="supplier-detail-header"></div>
+                <div class="section-title"><i class="fas fa-list"></i> Purchase &amp; Payment History</div>
+                <div class="toolbar" style="margin-bottom:12px;">
+                    <select class="sort-select" id="supTxFilter">
+                        <option value="all">All Transactions</option>
+                        <option value="purchase">Purchases Only</option>
+                        <option value="payment">Payments Only</option>
+                    </select>
+                </div>
+                <div class="table-container" id="sup-tx-table-container">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Invoice / Notes</th>
+                                    <th>Balance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sup-tx-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="sup-tx-empty" class="empty-state" style="display:none;">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No transactions yet</h3>
+                    <p>Add a purchase or payment to get started.</p>
+                </div>
+            </div>
+
+            <!-- SETTINGS VIEW -->
+            <div class="view" id="view-settings">
+                <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:20px;">Settings</h1>
+                <div class="settings-section">
+                    <h3><i class="fas fa-palette"></i> Appearance</h3>
+                    <div class="settings-row">
+                        <div>
+                            <div class="sr-label">Dark Mode</div>
+                            <div class="sr-desc">Switch between light and dark theme</div>
+                        </div>
+                        <button class="btn btn-outline btn-sm" id="settingsThemeToggle" onclick="App.toggleTheme()">
+                            <i class="fas fa-moon"></i> Toggle
+                        </button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3><i class="fas fa-database"></i> Data Management</h3>
+                    <div class="settings-row">
+                        <div>
+                            <div class="sr-label">Export All Data</div>
+                            <div class="sr-desc">Download a JSON backup of all your data</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="App.exportData()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="sr-label">Import Data</div>
+                            <div class="sr-desc">Restore data from a JSON backup file</div>
+                        </div>
+                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">
+                            <i class="fas fa-upload"></i> Import
+                        </button>
+                        <input type="file" id="importFile" accept=".json" style="display:none" onchange="App.importData(event)">
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="sr-label" style="color:var(--danger)">Clear All Data</div>
+                            <div class="sr-desc">Permanently delete all customers and transactions</div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="Modal.openConfirm('Delete All Data', 'Are you sure you want to delete ALL data? This cannot be undone.', App.clearAllData)">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3><i class="fas fa-info-circle"></i> About</h3>
+                    <div class="settings-row">
+                        <div>
+                            <div class="sr-label">Baakiluu — Shopkeeper Credit Book</div>
+                            <div class="sr-desc">Version 2.0 • Track customer credits, supplier purchases & payments.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- SIDEBAR BACKDROP (outside grid so it never affects layout) -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- FAB (Floating Action Button) -->
+    <button class="fab" id="fabBtn" title="Quick Add" onclick="Modal.openQuickAdd()">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- MODAL OVERLAY -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        /* =========================================================
+           STORAGE SERVICE
+           ========================================================= */
+        const STORAGE_KEY = 'baakiluu_data';
+
+        const StorageService = {
+            getDefault() {
+                return { version: 2, customers: [], suppliers: [], settings: { theme: 'light' } };
+            },
+            load() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return this.getDefault();
+                    const data = JSON.parse(raw);
+                    if (!data.customers) return this.getDefault();
+                    // Migration: add suppliers array if missing
+                    if (!data.suppliers) data.suppliers = [];
+                    if (!data.version || data.version < 2) data.version = 2;
+                    return data;
+                } catch { return this.getDefault(); }
+            },
+            save(data) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            },
+            generateId() {
+                return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+            }
+        };
+
+        /* =========================================================
+           APP STATE
+           ========================================================= */
+        let DATA = StorageService.load();
+
+        function saveData() {
+            StorageService.save(DATA);
+        }
+
+        /* =========================================================
+           CUSTOMER SERVICE
+           ========================================================= */
+        const CustomerService = {
+            getAll() { return DATA.customers; },
+            get(id) { return DATA.customers.find(c => c.id === id); },
+            add(name, phone) {
+                const customer = {
+                    id: StorageService.generateId(),
+                    name: name.trim(),
+                    phone: phone.trim(),
+                    createdAt: new Date().toISOString(),
+                    transactions: []
+                };
+                DATA.customers.push(customer);
+                saveData();
+                return customer;
+            },
+            edit(id, name, phone) {
+                const c = this.get(id);
+                if (c) {
+                    c.name = name.trim();
+                    c.phone = phone.trim();
+                    saveData();
+                }
+                return c;
+            },
+            delete(id) {
+                DATA.customers = DATA.customers.filter(c => c.id !== id);
+                saveData();
+            },
+            search(query) {
+                const q = query.toLowerCase().trim();
+                if (!q) return this.getAll();
+                return DATA.customers.filter(c =>
+                    c.name.toLowerCase().includes(q) || c.phone.includes(q)
+                );
+            },
+            getBalance(customer) {
+                return customer.transactions.reduce((sum, tx) => {
+                    return tx.type === 'credit' ? sum + tx.amount : sum - tx.amount;
+                }, 0);
+            },
+            getLastTransactionDate(customer) {
+                if (!customer.transactions.length) return null;
+                const sorted = [...customer.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+                return sorted[0].date;
+            },
+            getLastPaymentDate(customer) {
+                const payments = customer.transactions.filter(t => t.type === 'payment');
+                if (!payments.length) return null;
+                const sorted = payments.sort((a, b) => new Date(b.date) - new Date(a.date));
+                return sorted[0].date;
+            },
+            isOverdue(customer) {
+                const balance = this.getBalance(customer);
+                if (balance <= 0) return false;
+                const lastPayment = this.getLastPaymentDate(customer);
+                const lastCredit = this.getLastTransactionDate(customer);
+                const refDate = lastPayment || lastCredit || customer.createdAt;
+                const daysSince = (Date.now() - new Date(refDate).getTime()) / (1000 * 60 * 60 * 24);
+                return daysSince > 30;
+            },
+            getTotalOutstanding() {
+                return DATA.customers.reduce((sum, c) => {
+                    const b = this.getBalance(c);
+                    return b > 0 ? sum + b : sum;
+                }, 0);
+            },
+            getOverdueCount() {
+                return DATA.customers.filter(c => this.isOverdue(c)).length;
+            },
+            getRecentTransactions(n = 10) {
+                const all = [];
+                DATA.customers.forEach(c => {
+                    c.transactions.forEach(tx => {
+                        all.push({ ...tx, customerName: c.name, customerId: c.id });
+                    });
+                });
+                all.sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.createdAt) - new Date(a.createdAt));
+                return all.slice(0, n);
+            },
+            sort(customers, sortKey) {
+                const arr = [...customers];
+                switch (sortKey) {
+                    case 'name-asc': return arr.sort((a, b) => a.name.localeCompare(b.name));
+                    case 'name-desc': return arr.sort((a, b) => b.name.localeCompare(a.name));
+                    case 'balance-desc': return arr.sort((a, b) => this.getBalance(b) - this.getBalance(a));
+                    case 'balance-asc': return arr.sort((a, b) => this.getBalance(a) - this.getBalance(b));
+                    case 'recent': return arr.sort((a, b) => {
+                        const da = this.getLastTransactionDate(a) || a.createdAt;
+                        const db = this.getLastTransactionDate(b) || b.createdAt;
+                        return new Date(db) - new Date(da);
+                    });
+                    case 'overdue': return arr.sort((a, b) => {
+                        const ao = this.isOverdue(a) ? 0 : 1;
+                        const bo = this.isOverdue(b) ? 0 : 1;
+                        return ao - bo || this.getBalance(b) - this.getBalance(a);
+                    });
+                    default: return arr;
+                }
+            }
+        };
+
+        /* =========================================================
+           TRANSACTION SERVICE
+           ========================================================= */
+        const TransactionService = {
+            add(customerId, type, amount, date, notes) {
+                const customer = CustomerService.get(customerId);
+                if (!customer) return null;
+                const tx = {
+                    id: StorageService.generateId(),
+                    type,
+                    amount: parseFloat(amount),
+                    date,
+                    notes: (notes || '').trim(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                customer.transactions.push(tx);
+                saveData();
+                return tx;
+            },
+            edit(customerId, txId, updates) {
+                const customer = CustomerService.get(customerId);
+                if (!customer) return null;
+                const tx = customer.transactions.find(t => t.id === txId);
+                if (!tx) return null;
+                if (updates.amount !== undefined) tx.amount = parseFloat(updates.amount);
+                if (updates.date !== undefined) tx.date = updates.date;
+                if (updates.notes !== undefined) tx.notes = updates.notes.trim();
+                if (updates.type !== undefined) tx.type = updates.type;
+                tx.updatedAt = new Date().toISOString();
+                saveData();
+                return tx;
+            },
+            delete(customerId, txId) {
+                const customer = CustomerService.get(customerId);
+                if (!customer) return;
+                customer.transactions = customer.transactions.filter(t => t.id !== txId);
+                saveData();
+            }
+        };
+
+        /* =========================================================
+           SUPPLIER SERVICE
+           ========================================================= */
+        const SupplierService = {
+            getAll() { return DATA.suppliers; },
+            get(id) { return DATA.suppliers.find(s => s.id === id); },
+            add(name, phone, company) {
+                const supplier = {
+                    id: StorageService.generateId(),
+                    name: name.trim(),
+                    phone: phone.trim(),
+                    company: (company || '').trim(),
+                    createdAt: new Date().toISOString(),
+                    transactions: []
+                };
+                DATA.suppliers.push(supplier);
+                saveData();
+                return supplier;
+            },
+            edit(id, name, phone, company) {
+                const s = this.get(id);
+                if (s) {
+                    s.name = name.trim();
+                    s.phone = phone.trim();
+                    s.company = (company || '').trim();
+                    saveData();
+                }
+                return s;
+            },
+            delete(id) {
+                DATA.suppliers = DATA.suppliers.filter(s => s.id !== id);
+                saveData();
+            },
+            search(query) {
+                const q = query.toLowerCase().trim();
+                if (!q) return this.getAll();
+                return DATA.suppliers.filter(s =>
+                    s.name.toLowerCase().includes(q) || s.phone.includes(q) || (s.company || '').toLowerCase().includes(q)
+                );
+            },
+            // Balance > 0 means shopkeeper OWES the supplier
+            getBalance(supplier) {
+                return supplier.transactions.reduce((sum, tx) => {
+                    return tx.type === 'purchase' ? sum + tx.amount : sum - tx.amount;
+                }, 0);
+            },
+            getLastTransactionDate(supplier) {
+                if (!supplier.transactions.length) return null;
+                const sorted = [...supplier.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+                return sorted[0].date;
+            },
+            getLastPaymentDate(supplier) {
+                const payments = supplier.transactions.filter(t => t.type === 'payment');
+                if (!payments.length) return null;
+                const sorted = payments.sort((a, b) => new Date(b.date) - new Date(a.date));
+                return sorted[0].date;
+            },
+            isOverdue(supplier) {
+                const balance = this.getBalance(supplier);
+                if (balance <= 0) return false;
+                const lastPayment = this.getLastPaymentDate(supplier);
+                const lastPurchase = this.getLastTransactionDate(supplier);
+                const refDate = lastPayment || lastPurchase || supplier.createdAt;
+                const daysSince = (Date.now() - new Date(refDate).getTime()) / (1000 * 60 * 60 * 24);
+                return daysSince > 30;
+            },
+            getTotalPayable() {
+                return DATA.suppliers.reduce((sum, s) => {
+                    const b = this.getBalance(s);
+                    return b > 0 ? sum + b : sum;
+                }, 0);
+            },
+            getOverdueCount() {
+                return DATA.suppliers.filter(s => this.isOverdue(s)).length;
+            },
+            getRecentTransactions(n = 10) {
+                const all = [];
+                DATA.suppliers.forEach(s => {
+                    s.transactions.forEach(tx => {
+                        all.push({ ...tx, supplierName: s.name, supplierId: s.id });
+                    });
+                });
+                all.sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.createdAt) - new Date(a.createdAt));
+                return all.slice(0, n);
+            },
+            sort(suppliers, sortKey) {
+                const arr = [...suppliers];
+                switch (sortKey) {
+                    case 'name-asc': return arr.sort((a, b) => a.name.localeCompare(b.name));
+                    case 'name-desc': return arr.sort((a, b) => b.name.localeCompare(a.name));
+                    case 'balance-desc': return arr.sort((a, b) => this.getBalance(b) - this.getBalance(a));
+                    case 'balance-asc': return arr.sort((a, b) => this.getBalance(a) - this.getBalance(b));
+                    case 'recent': return arr.sort((a, b) => {
+                        const da = this.getLastTransactionDate(a) || a.createdAt;
+                        const db = this.getLastTransactionDate(b) || b.createdAt;
+                        return new Date(db) - new Date(da);
+                    });
+                    case 'overdue': return arr.sort((a, b) => {
+                        const ao = this.isOverdue(a) ? 0 : 1;
+                        const bo = this.isOverdue(b) ? 0 : 1;
+                        return ao - bo || this.getBalance(b) - this.getBalance(a);
+                    });
+                    default: return arr;
+                }
+            }
+        };
+
+        /* =========================================================
+           SUPPLIER TRANSACTION SERVICE
+           ========================================================= */
+        const SupplierTransactionService = {
+            add(supplierId, type, amount, date, notes) {
+                const supplier = SupplierService.get(supplierId);
+                if (!supplier) return null;
+                const tx = {
+                    id: StorageService.generateId(),
+                    type, // 'purchase' or 'payment'
+                    amount: parseFloat(amount),
+                    date,
+                    notes: (notes || '').trim(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                supplier.transactions.push(tx);
+                saveData();
+                return tx;
+            },
+            edit(supplierId, txId, updates) {
+                const supplier = SupplierService.get(supplierId);
+                if (!supplier) return null;
+                const tx = supplier.transactions.find(t => t.id === txId);
+                if (!tx) return null;
+                if (updates.amount !== undefined) tx.amount = parseFloat(updates.amount);
+                if (updates.date !== undefined) tx.date = updates.date;
+                if (updates.notes !== undefined) tx.notes = updates.notes.trim();
+                if (updates.type !== undefined) tx.type = updates.type;
+                tx.updatedAt = new Date().toISOString();
+                saveData();
+                return tx;
+            },
+            delete(supplierId, txId) {
+                const supplier = SupplierService.get(supplierId);
+                if (!supplier) return;
+                supplier.transactions = supplier.transactions.filter(t => t.id !== txId);
+                saveData();
+            }
+        };
+
+        /* =========================================================
+           UTILITY FUNCTIONS
+           ========================================================= */
+        function formatCurrency(amount) {
+            return '₹' + Math.abs(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function todayStr() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        /* =========================================================
+           TOAST
+           ========================================================= */
+        const Toast = {
+            show(message, type = 'success') {
+                const container = document.getElementById('toastContainer');
+                const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `<i class="fas ${icons[type]}"></i> ${escapeHtml(message)}`;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    toast.style.transition = 'all 0.3s';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        };
+
+        /* =========================================================
+           MODAL
+           ========================================================= */
+        const Modal = {
+            overlay: document.getElementById('modalOverlay'),
+            content: document.getElementById('modalContent'),
+            open(html) {
+                this.content.innerHTML = html;
+                this.overlay.classList.add('show');
+                const firstInput = this.content.querySelector('input, textarea, select');
+                if (firstInput) setTimeout(() => firstInput.focus(), 100);
+            },
+            close() {
+                this.overlay.classList.remove('show');
+            },
+            openAddCustomer(editId) {
+                const customer = editId ? CustomerService.get(editId) : null;
+                const title = customer ? 'Edit Customer' : 'Add New Customer';
+                const btnText = customer ? 'Save Changes' : 'Add Customer';
+                this.open(`
+                    <div class="modal-header">
+                        <h3>${title}</h3>
+                        <button class="modal-close" onclick="Modal.close()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="customerForm" onsubmit="Modal.submitCustomer(event, '${editId || ''}')">
+                            <div class="form-group">
+                                <label>Customer Name *</label>
+                                <input type="text" id="cf-name" value="${customer ? escapeHtml(customer.name) : ''}" placeholder="Enter full name" required>
+                                <div class="error-msg">Name is required</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number *</label>
+                                <input type="tel" id="cf-phone" value="${customer ? escapeHtml(customer.phone) : ''}" placeholder="Enter phone number" required>
+                                <div class="error-msg">Phone number is required</div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline btn-sm" type="button" onclick="Modal.close()">Cancel</button>
+                        <button class="btn btn-primary btn-sm" type="submit" form="customerForm"><i class="fas fa-check"></i> ${btnText}</button>
+                    </div>
+                `);
+            },
+            submitCustomer(e, editId) {
+                e.preventDefault();
+                const name = document.getElementById('cf-name').value.trim();
+                const phone = document.getElementById('cf-phone').value.trim();
+                let hasError = false;
+                if (!name) { document.getElementById('cf-name').parentElement.classList.add('has-error'); hasError = true; }
+                if (!phone) { document.getElementById('cf-phone').parentElement.classList.add('has-error'); hasError = true; }
+                if (hasError) return;
+
+                if (editId) {
+                    CustomerService.edit(editId, name, phone);
+                    Toast.show('Customer updated successfully');
+                } else {
+                    CustomerService.add(name, phone);
+                    Toast.show('Customer added successfully');
+                }
+                this.close();
+                Router.render();
+            },
+            openTransaction(customerId, type, editTx) {
+                const isEdit = !!editTx;
+                const title = isEdit ? 'Edit Transaction' : (type === 'credit' ? 'Add Credit (Items Taken)' : 'Add Payment (Amount Paid)');
+                const btnText = isEdit ? 'Save Changes' : (type === 'credit' ? 'Add Credit' : 'Record Payment');
+                const btnClass = type === 'credit' ? 'btn-danger' : 'btn-success';
+                const txType = isEdit ? editTx.type : type;
+                this.open(`
+                    <div class="modal-header">
+                        <h3>${title}</h3>
+                        <button class="modal-close" onclick="Modal.close()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="txForm" onsubmit="Modal.submitTransaction(event, '${customerId}', '${txType}', '${isEdit ? editTx.id : ''}')">
+                            ${isEdit ? `
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="tf-type">
+                                    <option value="credit" ${editTx.type === 'credit' ? 'selected' : ''}>Credit (Items Taken)</option>
+                                    <option value="payment" ${editTx.type === 'payment' ? 'selected' : ''}>Payment (Amount Paid)</option>
+                                </select>
+                            </div>` : ''}
+                            <div class="form-group">
+                                <label>Amount (₹) *</label>
+                                <input type="number" id="tf-amount" value="${isEdit ? editTx.amount : ''}" placeholder="Enter amount" min="0.01" step="0.01" required>
+                                <div class="error-msg">Enter a valid amount</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Date *</label>
+                                <input type="date" id="tf-date" value="${isEdit ? editTx.date : todayStr()}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Notes / Items Description</label>
+                                <textarea id="tf-notes" placeholder="e.g., Rice 5kg, Oil 1L, Sugar 2kg...">${isEdit ? escapeHtml(editTx.notes) : ''}</textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline btn-sm" type="button" onclick="Modal.close()">Cancel</button>
+                        <button class="btn ${btnClass} btn-sm" type="submit" form="txForm"><i class="fas fa-check"></i> ${btnText}</button>
+                    </div>
+                `);
+            },
+            submitTransaction(e, customerId, type, editTxId) {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('tf-amount').value);
+                const date = document.getElementById('tf-date').value;
+                const notes = document.getElementById('tf-notes').value;
+                const typeEl = document.getElementById('tf-type');
+                const finalType = typeEl ? typeEl.value : type;
+
+                if (!amount || amount <= 0) {
+                    document.getElementById('tf-amount').parentElement.classList.add('has-error');
+                    return;
+                }
+
+                if (editTxId) {
+                    TransactionService.edit(customerId, editTxId, { amount, date, notes, type: finalType });
+                    Toast.show('Transaction updated');
+                } else {
+                    TransactionService.add(customerId, finalType, amount, date, notes);
+                    Toast.show(finalType === 'credit' ? 'Credit added' : 'Payment recorded');
+                }
+                this.close();
+                Router.render();
+            },
+            openConfirm(title, message, onConfirm) {
+                this.open(`
+                    <div class="modal-header">
+                        <h3>${title}</h3>
+                        <button class="modal-close" onclick="Modal.close()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="color:var(--text-secondary)">${message}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline btn-sm" onclick="Modal.close()">Cancel</button>
+                        <button class="btn btn-danger btn-sm" id="confirmBtn"><i class="fas fa-trash"></i> Confirm</button>
+                    </div>
+                `);
+                document.getElementById('confirmBtn').addEventListener('click', () => {
+                    onConfirm();
+                    this.close();
+                });
+            },
+            openAddSupplier(editId) {
+                const supplier = editId ? SupplierService.get(editId) : null;
+                const title = supplier ? 'Edit Supplier' : 'Add New Supplier';
+                const btnText = supplier ? 'Save Changes' : 'Add Supplier';
+                this.open(`
+                    <div class="modal-header">
+                        <h3>${title}</h3>
+                        <button class="modal-close" onclick="Modal.close()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="supplierForm" onsubmit="Modal.submitSupplier(event, '${editId || ''}')">
+                            <div class="form-group">
+                                <label>Contact Person Name *</label>
+                                <input type="text" id="sf-name" value="${supplier ? escapeHtml(supplier.name) : ''}" placeholder="Enter name" required>
+                                <div class="error-msg">Name is required</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Company / Factory Name</label>
+                                <input type="text" id="sf-company" value="${supplier ? escapeHtml(supplier.company || '') : ''}" placeholder="e.g., ABC Distributors">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number *</label>
+                                <input type="tel" id="sf-phone" value="${supplier ? escapeHtml(supplier.phone) : ''}" placeholder="Enter phone number" required>
+                                <div class="error-msg">Phone number is required</div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline btn-sm" type="button" onclick="Modal.close()">Cancel</button>
+                        <button class="btn btn-primary btn-sm" type="submit" form="supplierForm"><i class="fas fa-check"></i> ${btnText}</button>
+                    </div>
+                `);
+            },
+            submitSupplier(e, editId) {
+                e.preventDefault();
+                const name = document.getElementById('sf-name').value.trim();
+                const phone = document.getElementById('sf-phone').value.trim();
+                const company = document.getElementById('sf-company').value.trim();
+                let hasError = false;
+                if (!name) { document.getElementById('sf-name').parentElement.classList.add('has-error'); hasError = true; }
+                if (!phone) { document.getElementById('sf-phone').parentElement.classList.add('has-error'); hasError = true; }
+                if (hasError) return;
+
+                if (editId) {
+                    SupplierService.edit(editId, name, phone, company);
+                    Toast.show('Supplier updated successfully');
+                } else {
+                    SupplierService.add(name, phone, company);
+                    Toast.show('Supplier added successfully');
+                }
+                this.close();
+                Router.render();
+            },
+            openSupplierTransaction(supplierId, type, editTx) {
+                const isEdit = !!editTx;
+                const title = isEdit ? 'Edit Transaction' : (type === 'purchase' ? 'Add Purchase (Goods Bought)' : 'Record Payment (Amount Paid to Supplier)');
+                const btnText = isEdit ? 'Save Changes' : (type === 'purchase' ? 'Add Purchase' : 'Record Payment');
+                const btnClass = type === 'purchase' ? 'btn-primary' : 'btn-success';
+                const txType = isEdit ? editTx.type : type;
+                this.open(`
+                    <div class="modal-header">
+                        <h3>${title}</h3>
+                        <button class="modal-close" onclick="Modal.close()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="supTxForm" onsubmit="Modal.submitSupplierTransaction(event, '${supplierId}', '${txType}', '${isEdit ? editTx.id : ''}')">
+                            ${isEdit ? `
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="stf-type">
+                                    <option value="purchase" ${editTx.type === 'purchase' ? 'selected' : ''}>Purchase (Goods Bought)</option>
+                                    <option value="payment" ${editTx.type === 'payment' ? 'selected' : ''}>Payment (Paid to Supplier)</option>
+                                </select>
+                            </div>` : ''}
+                            <div class="form-group">
+                                <label>Amount (₹) *</label>
+                                <input type="number" id="stf-amount" value="${isEdit ? editTx.amount : ''}" placeholder="Enter amount" min="0.01" step="0.01" required>
+                                <div class="error-msg">Enter a valid amount</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Date *</label>
+                                <input type="date" id="stf-date" value="${isEdit ? editTx.date : todayStr()}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Invoice No. / Notes</label>
+                                <textarea id="stf-notes" placeholder="e.g., Invoice #1234, Rice 50kg, Dal 20kg...">${isEdit ? escapeHtml(editTx.notes) : ''}</textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline btn-sm" type="button" onclick="Modal.close()">Cancel</button>
+                        <button class="btn ${btnClass} btn-sm" type="submit" form="supTxForm"><i class="fas fa-check"></i> ${btnText}</button>
+                    </div>
+                `);
+            },
+            submitSupplierTransaction(e, supplierId, type, editTxId) {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('stf-amount').value);
+                const date = document.getElementById('stf-date').value;
+                const notes = document.getElementById('stf-notes').value;
+                const typeEl = document.getElementById('stf-type');
+                const finalType = typeEl ? typeEl.value : type;
+
+                if (!amount || amount <= 0) {
+                    document.getElementById('stf-amount').parentElement.classList.add('has-error');
+                    return;
+                }
+
+                if (editTxId) {
+                    SupplierTransactionService.edit(supplierId, editTxId, { amount, date, notes, type: finalType });
+                    Toast.show('Transaction updated');
+                } else {
+                    SupplierTransactionService.add(supplierId, finalType, amount, date, notes);
+                    Toast.show(finalType === 'purchase' ? 'Purchase added' : 'Payment recorded');
+                }
+                this.close();
+                Router.render();
+            },
+            openQuickAdd() {
+                const customers = CustomerService.getAll();
+                const suppliers = SupplierService.getAll();
+                if (!customers.length && !suppliers.length) {
+                    this.openAddCustomer();
+                    return;
+                }
+                const custOptions = customers.map(c => `<option value="customer:${c.id}">${escapeHtml(c.name)}</option>`).join('');
+                const supOptions = suppliers.map(s => `<option value="supplier:${s.id}">${escapeHtml(s.name)}${s.company ? ' (' + escapeHtml(s.company) + ')' : ''}</option>`).join('');
+                this.open(`
+                    <div class="modal-header">
+                        <h3>Quick Add Transaction</h3>
+                        <button class="modal-close" onclick="Modal.close()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="quickForm" onsubmit="Modal.submitQuickAdd(event)">
+                            <div class="form-group">
+                                <label>Select Party *</label>
+                                <select id="qf-party" required onchange="Modal.onQuickPartyChange()">
+                                    ${custOptions ? '<optgroup label="Customers">' + custOptions + '</optgroup>' : ''}
+                                    ${supOptions ? '<optgroup label="Suppliers / Factories">' + supOptions + '</optgroup>' : ''}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Type *</label>
+                                <select id="qf-type">
+                                    <option value="credit">Credit (Items Taken by Customer)</option>
+                                    <option value="payment">Payment (Received from Customer)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₹) *</label>
+                                <input type="number" id="qf-amount" placeholder="Enter amount" min="0.01" step="0.01" required>
+                                <div class="error-msg">Enter a valid amount</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Date *</label>
+                                <input type="date" id="qf-date" value="${todayStr()}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Notes / Items</label>
+                                <textarea id="qf-notes" placeholder="e.g., Rice 5kg, Oil 1L..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline btn-sm" onclick="Modal.close()">Cancel</button>
+                        <button class="btn btn-primary btn-sm" type="submit" form="quickForm"><i class="fas fa-check"></i> Add</button>
+                    </div>
+                `);
+                // Trigger initial type options
+                this.onQuickPartyChange();
+            },
+            onQuickPartyChange() {
+                const party = document.getElementById('qf-party').value;
+                const typeSelect = document.getElementById('qf-type');
+                if (party.startsWith('supplier:')) {
+                    typeSelect.innerHTML = `
+                        <option value="purchase">Purchase (Goods Bought from Supplier)</option>
+                        <option value="payment">Payment (Paid to Supplier)</option>
+                    `;
+                } else {
+                    typeSelect.innerHTML = `
+                        <option value="credit">Credit (Items Taken by Customer)</option>
+                        <option value="payment">Payment (Received from Customer)</option>
+                    `;
+                }
+            },
+            submitQuickAdd(e) {
+                e.preventDefault();
+                const party = document.getElementById('qf-party').value;
+                const type = document.getElementById('qf-type').value;
+                const amount = parseFloat(document.getElementById('qf-amount').value);
+                const date = document.getElementById('qf-date').value;
+                const notes = document.getElementById('qf-notes').value;
+                if (!amount || amount <= 0) {
+                    document.getElementById('qf-amount').parentElement.classList.add('has-error');
+                    return;
+                }
+                const [partyType, partyId] = party.split(':');
+                if (partyType === 'supplier') {
+                    SupplierTransactionService.add(partyId, type, amount, date, notes);
+                    Toast.show(type === 'purchase' ? 'Purchase added' : 'Payment recorded');
+                } else {
+                    TransactionService.add(partyId, type, amount, date, notes);
+                    Toast.show(type === 'credit' ? 'Credit added' : 'Payment recorded');
+                }
+                this.close();
+                Router.render();
+            }
+        };
+
+        // Close modal on overlay click or Escape key
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('modalOverlay')) Modal.close();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') Modal.close();
+        });
+
+        /* =========================================================
+           VIEW RENDERERS
+           ========================================================= */
+        const Views = {
+            dashboard() {
+                // Customer Stats
+                const totalOutstanding = CustomerService.getTotalOutstanding();
+                const customerCount = DATA.customers.length;
+                const overdueCount = CustomerService.getOverdueCount();
+
+                // Supplier Stats
+                const totalPayable = SupplierService.getTotalPayable();
+                const supplierCount = DATA.suppliers.length;
+                const overdueSuppliers = SupplierService.getOverdueCount();
+
+                document.getElementById('stats-grid').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i class="fas fa-arrow-down"></i></div>
+                        <div class="stat-value">${formatCurrency(totalOutstanding)}</div>
+                        <div class="stat-label">Receivable (Customers Owe You)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fas fa-arrow-up"></i></div>
+                        <div class="stat-value">${formatCurrency(totalPayable)}</div>
+                        <div class="stat-label">Payable (You Owe Suppliers)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon ${totalOutstanding - totalPayable >= 0 ? 'green' : 'yellow'}"><i class="fas fa-scale-balanced"></i></div>
+                        <div class="stat-value" style="color:${totalOutstanding - totalPayable >= 0 ? 'var(--success)' : 'var(--danger)'}">${formatCurrency(totalOutstanding - totalPayable)}</div>
+                        <div class="stat-label">Net Balance</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon yellow"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-value">${overdueCount + overdueSuppliers}</div>
+                        <div class="stat-label">Overdue Accounts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fas fa-users"></i></div>
+                        <div class="stat-value">${customerCount}</div>
+                        <div class="stat-label">Customers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fas fa-industry"></i></div>
+                        <div class="stat-value">${supplierCount}</div>
+                        <div class="stat-label">Suppliers</div>
+                    </div>
+                `;
+
+                // Overdue alert
+                const alertEl = document.getElementById('overdue-alert');
+                let alertHTML = '';
+                if (overdueCount > 0) {
+                    alertHTML += `<div class="alert-banner danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span><strong>${overdueCount} customer${overdueCount > 1 ? 's' : ''}</strong> ha${overdueCount > 1 ? 've' : 's'} overdue balance (no payment in 30+ days)</span>
+                    </div>`;
+                }
+                if (overdueSuppliers > 0) {
+                    alertHTML += `<div class="alert-banner warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span><strong>${overdueSuppliers} supplier${overdueSuppliers > 1 ? 's' : ''}</strong> — you have overdue payable (no payment in 30+ days)</span>
+                    </div>`;
+                }
+                alertEl.innerHTML = alertHTML;
+
+                // Recent transactions (merged customer + supplier)
+                const recentCust = CustomerService.getRecentTransactions(15).map(tx => ({ ...tx, partyType: 'customer' }));
+                const recentSup = SupplierService.getRecentTransactions(15).map(tx => ({ ...tx, partyType: 'supplier' }));
+                const recent = [...recentCust, ...recentSup].sort((a, b) => new Date(b.date) - new Date(a.date) || new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 15);
+                const tbody = document.getElementById('recent-transactions-body');
+                const emptyEl = document.getElementById('recent-empty');
+                const tableEl = document.getElementById('recent-transactions-container');
+
+                if (!recent.length) {
+                    tableEl.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                } else {
+                    tableEl.style.display = 'block';
+                    emptyEl.style.display = 'none';
+                    tbody.innerHTML = recent.map(tx => {
+                        const isSupplier = tx.partyType === 'supplier';
+                        const name = isSupplier ? tx.supplierName : tx.customerName;
+                        const link = isSupplier ? `#/supplier/${tx.supplierId}` : `#/customer/${tx.customerId}`;
+                        const icon = isSupplier ? 'fa-industry' : 'fa-user';
+                        let typeBadge, amtClass, amtPrefix;
+                        if (tx.type === 'credit') {
+                            typeBadge = 'credit'; amtClass = 'tx-credit'; amtPrefix = '+';
+                        } else if (tx.type === 'purchase') {
+                            typeBadge = 'purchase'; amtClass = 'tx-credit'; amtPrefix = '+';
+                        } else {
+                            typeBadge = 'payment'; amtClass = 'tx-payment'; amtPrefix = '-';
+                        }
+                        const typeLabel = tx.type === 'credit' ? 'Credit' : tx.type === 'purchase' ? 'Purchase' : 'Payment';
+                        return `
+                            <tr style="cursor:pointer" onclick="window.location.hash='${link}'">
+                                <td><i class="fas ${icon}" style="color:var(--text-secondary);margin-right:6px;font-size:0.75rem;"></i><strong>${escapeHtml(name)}</strong></td>
+                                <td><span class="tx-type-badge ${typeBadge}"><i class="fas ${tx.type === 'payment' ? 'fa-arrow-down' : 'fa-arrow-up'}"></i> ${typeLabel}</span></td>
+                                <td class="${amtClass}">${amtPrefix}${formatCurrency(tx.amount)}</td>
+                                <td>${formatDate(tx.date)}</td>
+                                <td style="color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(tx.notes) || '—'}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            },
+
+            customers() {
+                const query = document.getElementById('customerSearch').value;
+                const sortKey = document.getElementById('customerSort').value;
+                let customers = CustomerService.search(query);
+                customers = CustomerService.sort(customers, sortKey);
+
+                const grid = document.getElementById('customer-grid');
+                const emptyEl = document.getElementById('customers-empty');
+
+                if (!customers.length) {
+                    grid.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                    if (query) {
+                        emptyEl.innerHTML = `<i class="fas fa-search"></i><h3>No results found</h3><p>No customers match "${escapeHtml(query)}"</p>`;
+                    } else {
+                        emptyEl.innerHTML = `<i class="fas fa-users"></i><h3>No customers yet</h3><p>Click "Add Customer" to get started.</p>`;
+                    }
+                } else {
+                    grid.style.display = 'grid';
+                    emptyEl.style.display = 'none';
+                    grid.innerHTML = customers.map(c => {
+                        const balance = CustomerService.getBalance(c);
+                        const overdue = CustomerService.isOverdue(c);
+                        const lastDate = CustomerService.getLastTransactionDate(c);
+                        return `
+                            <div class="customer-card" onclick="window.location.hash='#/customer/${c.id}'">
+                                <div class="cc-header">
+                                    <div>
+                                        <div class="cc-name">${escapeHtml(c.name)}</div>
+                                        <div class="cc-phone"><i class="fas fa-phone"></i> ${escapeHtml(c.phone)}</div>
+                                    </div>
+                                    <div class="cc-balance ${balance > 0 ? 'has-balance' : 'no-balance'}">
+                                        ${formatCurrency(balance)}
+                                    </div>
+                                </div>
+                                <div class="cc-footer">
+                                    <span>${lastDate ? 'Last: ' + formatDate(lastDate) : 'No transactions'}</span>
+                                    ${overdue ? '<span class="badge overdue"><i class="fas fa-exclamation-circle"></i> Overdue</span>' : (balance <= 0 ? '<span class="badge clear"><i class="fas fa-check-circle"></i> Settled</span>' : '')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            },
+
+            customerDetail(customerId) {
+                const customer = CustomerService.get(customerId);
+                if (!customer) {
+                    window.location.hash = '#/customers';
+                    return;
+                }
+                const balance = CustomerService.getBalance(customer);
+                const overdue = CustomerService.isOverdue(customer);
+                const totalCredit = customer.transactions.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
+                const totalPayment = customer.transactions.filter(t => t.type === 'payment').reduce((s, t) => s + t.amount, 0);
+
+                document.getElementById('detail-header').innerHTML = `
+                    <div class="dh-top">
+                        <div class="dh-info">
+                            <h2>${escapeHtml(customer.name)} ${overdue ? '<span class="badge overdue" style="font-size:0.7rem;vertical-align:middle;"><i class="fas fa-exclamation-circle"></i> Overdue</span>' : ''}</h2>
+                            <p><i class="fas fa-phone"></i> ${escapeHtml(customer.phone)}</p>
+                            <p style="margin-top:2px;font-size:0.82rem;"><i class="fas fa-calendar"></i> Customer since ${formatDate(customer.createdAt)}</p>
+                            <p style="margin-top:8px;font-size:0.85rem;">
+                                Total Credit: <strong class="tx-credit">${formatCurrency(totalCredit)}</strong> &nbsp;|&nbsp;
+                                Total Paid: <strong class="tx-payment">${formatCurrency(totalPayment)}</strong>
+                            </p>
+                        </div>
+                        <div class="dh-balance">
+                            <div class="label">Outstanding Balance</div>
+                            <div class="amount ${balance > 0 ? 'has-balance' : 'no-balance'}">${formatCurrency(balance)}</div>
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        <button class="btn btn-danger btn-sm" onclick="Modal.openTransaction('${customer.id}', 'credit')">
+                            <i class="fas fa-plus"></i> Add Credit
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="Modal.openTransaction('${customer.id}', 'payment')">
+                            <i class="fas fa-indian-rupee-sign"></i> Record Payment
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="Modal.openAddCustomer('${customer.id}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="Views.printLedger('${customer.id}')">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="Views.exportCSV('${customer.id}')">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </button>
+                        <button class="btn btn-ghost btn-sm delete-btn" onclick="Views.confirmDeleteCustomer('${customer.id}', '${escapeHtml(customer.name)}')" style="color:var(--danger)">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+
+                // Transactions
+                const filter = document.getElementById('txFilter').value;
+                let txs = [...customer.transactions].sort((a, b) => new Date(a.date) - new Date(b.date) || new Date(a.createdAt) - new Date(b.createdAt));
+                if (filter === 'credit') txs = txs.filter(t => t.type === 'credit');
+                if (filter === 'payment') txs = txs.filter(t => t.type === 'payment');
+
+                const tbody = document.getElementById('tx-table-body');
+                const emptyEl = document.getElementById('tx-empty');
+                const tableEl = document.getElementById('tx-table-container');
+
+                if (!txs.length) {
+                    tableEl.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                } else {
+                    tableEl.style.display = 'block';
+                    emptyEl.style.display = 'none';
+                    let runningBalance = 0;
+                    tbody.innerHTML = txs.map((tx, idx) => {
+                        if (tx.type === 'credit') runningBalance += tx.amount;
+                        else runningBalance -= tx.amount;
+                        return `
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td>${formatDate(tx.date)}</td>
+                                <td><span class="tx-type-badge ${tx.type}"><i class="fas ${tx.type === 'credit' ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${tx.type === 'credit' ? 'Credit' : 'Payment'}</span></td>
+                                <td class="${tx.type === 'credit' ? 'tx-credit' : 'tx-payment'}">${tx.type === 'credit' ? '+' : '-'}${formatCurrency(tx.amount)}</td>
+                                <td style="color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(tx.notes)}">${escapeHtml(tx.notes) || '—'}</td>
+                                <td><strong style="color:${runningBalance > 0 ? 'var(--credit-color)' : 'var(--payment-color)'}">${formatCurrency(runningBalance)}</strong></td>
+                                <td>
+                                    <div class="tx-actions">
+                                        <button title="Edit" onclick="event.stopPropagation(); Views.editTransaction('${customer.id}', '${tx.id}')"><i class="fas fa-pen"></i></button>
+                                        <button title="Delete" class="delete-btn" onclick="event.stopPropagation(); Views.confirmDeleteTransaction('${customer.id}', '${tx.id}', '${tx.type}', ${tx.amount})"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            },
+
+            printLedger(customerId) {
+                const customer = CustomerService.get(customerId);
+                if (!customer) return;
+                const balance = CustomerService.getBalance(customer);
+                const txs = [...customer.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                let runningBalance = 0;
+                const rows = txs.map((tx, idx) => {
+                    if (tx.type === 'credit') runningBalance += tx.amount;
+                    else runningBalance -= tx.amount;
+                    return `<tr>
+                        <td>${idx + 1}</td>
+                        <td>${formatDate(tx.date)}</td>
+                        <td>${tx.type === 'credit' ? 'Credit' : 'Payment'}</td>
+                        <td style="color:${tx.type === 'credit' ? '#e63946' : '#2d6a4f'}">${tx.type === 'credit' ? '+' : '-'}${formatCurrency(tx.amount)}</td>
+                        <td>${escapeHtml(tx.notes) || '—'}</td>
+                        <td><strong>${formatCurrency(runningBalance)}</strong></td>
+                    </tr>`;
+                }).join('');
+
+                const win = window.open('', '_blank');
+                win.document.write(`<!DOCTYPE html><html><head><title>Ledger - ${escapeHtml(customer.name)}</title>
+                <style>body{font-family:Arial,sans-serif;padding:30px;color:#333}h1{margin:0;font-size:1.4rem}
+                table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px 12px;text-align:left;font-size:0.85rem}
+                th{background:#f5f5f5;font-weight:600}tr:nth-child(even){background:#fafafa}
+                .meta{color:#666;margin-top:4px;font-size:0.9rem}.balance-box{margin-top:12px;font-size:1.1rem}
+                </style></head><body>
+                <h1>Baakiluu — Credit Ledger</h1>
+                <div class="meta"><strong>${escapeHtml(customer.name)}</strong> | Phone: ${escapeHtml(customer.phone)} | Printed: ${formatDate(todayStr())}</div>
+                <div class="balance-box">Outstanding Balance: <strong style="color:${balance > 0 ? '#e63946' : '#2d6a4f'}">${formatCurrency(balance)}</strong></div>
+                <table><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Amount</th><th>Notes</th><th>Balance</th></tr></thead><tbody>${rows}</tbody></table>
+                <script>window.print();<\/script></body></html>`);
+                win.document.close();
+            },
+
+            exportCSV(customerId) {
+                const customer = CustomerService.get(customerId);
+                if (!customer) return;
+                const txs = [...customer.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                let runningBalance = 0;
+                let csv = 'Sr No,Date,Type,Amount,Notes,Running Balance\n';
+                txs.forEach((tx, idx) => {
+                    if (tx.type === 'credit') runningBalance += tx.amount;
+                    else runningBalance -= tx.amount;
+                    csv += `${idx + 1},${tx.date},${tx.type},${tx.amount},"${tx.notes.replace(/"/g, '""')}",${runningBalance.toFixed(2)}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${customer.name.replace(/\s+/g, '_')}_ledger.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                Toast.show('CSV exported');
+            },
+
+            confirmDeleteCustomer(customerId, customerName) {
+                Modal.openConfirm(
+                    'Delete Customer',
+                    'Delete ' + customerName + ' and all their transactions? This cannot be undone.',
+                    function() {
+                        CustomerService.delete(customerId);
+                        Toast.show('Customer deleted');
+                        window.location.hash = '#/customers';
+                    }
+                );
+            },
+
+            editTransaction(customerId, txId) {
+                const customer = CustomerService.get(customerId);
+                if (!customer) return;
+                const tx = customer.transactions.find(t => t.id === txId);
+                if (!tx) return;
+                Modal.openTransaction(customerId, tx.type, tx);
+            },
+
+            confirmDeleteTransaction(customerId, txId, txType, txAmount) {
+                Modal.openConfirm(
+                    'Delete Transaction',
+                    'Delete this ' + txType + ' of ' + formatCurrency(txAmount) + '?',
+                    function() {
+                        TransactionService.delete(customerId, txId);
+                        Toast.show('Transaction deleted');
+                        Router.render();
+                    }
+                );
+            },
+
+            /* ========= SUPPLIER VIEWS ========= */
+            suppliers() {
+                const query = document.getElementById('supplierSearch').value;
+                const sortKey = document.getElementById('supplierSort').value;
+                let suppliers = SupplierService.search(query);
+                suppliers = SupplierService.sort(suppliers, sortKey);
+
+                const grid = document.getElementById('supplier-grid');
+                const emptyEl = document.getElementById('suppliers-empty');
+
+                if (!suppliers.length) {
+                    grid.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                    if (query) {
+                        emptyEl.innerHTML = '<i class="fas fa-search"></i><h3>No results found</h3><p>No suppliers match "' + escapeHtml(query) + '"</p>';
+                    } else {
+                        emptyEl.innerHTML = '<i class="fas fa-industry"></i><h3>No suppliers yet</h3><p>Click "Add Supplier" to get started.</p>';
+                    }
+                } else {
+                    grid.style.display = 'grid';
+                    emptyEl.style.display = 'none';
+                    grid.innerHTML = suppliers.map(s => {
+                        const balance = SupplierService.getBalance(s);
+                        const overdue = SupplierService.isOverdue(s);
+                        const lastDate = SupplierService.getLastTransactionDate(s);
+                        return `
+                            <div class="customer-card" onclick="window.location.hash='#/supplier/${s.id}'">
+                                <div class="cc-header">
+                                    <div>
+                                        <div class="cc-name"><i class="fas fa-industry" style="font-size:0.8rem;color:var(--primary);margin-right:6px;"></i>${escapeHtml(s.name)}</div>
+                                        ${s.company ? '<div style="color:var(--text-secondary);font-size:0.82rem;margin-top:1px;">' + escapeHtml(s.company) + '</div>' : ''}
+                                        <div class="cc-phone"><i class="fas fa-phone"></i> ${escapeHtml(s.phone)}</div>
+                                    </div>
+                                    <div class="cc-balance ${balance > 0 ? 'has-balance' : 'no-balance'}">
+                                        ${formatCurrency(balance)}
+                                    </div>
+                                </div>
+                                <div class="cc-footer">
+                                    <span>${lastDate ? 'Last: ' + formatDate(lastDate) : 'No transactions'}</span>
+                                    ${overdue ? '<span class="badge overdue"><i class="fas fa-exclamation-circle"></i> Overdue</span>' : (balance <= 0 ? '<span class="badge clear"><i class="fas fa-check-circle"></i> Settled</span>' : '')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            },
+
+            supplierDetail(supplierId) {
+                const supplier = SupplierService.get(supplierId);
+                if (!supplier) {
+                    window.location.hash = '#/suppliers';
+                    return;
+                }
+                const balance = SupplierService.getBalance(supplier);
+                const overdue = SupplierService.isOverdue(supplier);
+                const totalPurchase = supplier.transactions.filter(t => t.type === 'purchase').reduce((s, t) => s + t.amount, 0);
+                const totalPayment = supplier.transactions.filter(t => t.type === 'payment').reduce((s, t) => s + t.amount, 0);
+
+                document.getElementById('supplier-detail-header').innerHTML = `
+                    <div class="dh-top">
+                        <div class="dh-info">
+                            <h2><i class="fas fa-industry" style="font-size:1.1rem;color:var(--primary);margin-right:8px;"></i>${escapeHtml(supplier.name)} ${overdue ? '<span class="badge overdue" style="font-size:0.7rem;vertical-align:middle;"><i class="fas fa-exclamation-circle"></i> Overdue</span>' : ''}</h2>
+                            ${supplier.company ? '<p style="font-weight:600;color:var(--text);margin-top:2px;">' + escapeHtml(supplier.company) + '</p>' : ''}
+                            <p><i class="fas fa-phone"></i> ${escapeHtml(supplier.phone)}</p>
+                            <p style="margin-top:2px;font-size:0.82rem;"><i class="fas fa-calendar"></i> Supplier since ${formatDate(supplier.createdAt)}</p>
+                            <p style="margin-top:8px;font-size:0.85rem;">
+                                Total Purchased: <strong style="color:var(--primary)">${formatCurrency(totalPurchase)}</strong> &nbsp;|&nbsp;
+                                Total Paid: <strong class="tx-payment">${formatCurrency(totalPayment)}</strong>
+                            </p>
+                        </div>
+                        <div class="dh-balance">
+                            <div class="label">You Owe</div>
+                            <div class="amount ${balance > 0 ? 'has-balance' : 'no-balance'}">${formatCurrency(balance)}</div>
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        <button class="btn btn-primary btn-sm" onclick="Modal.openSupplierTransaction('${supplier.id}', 'purchase')">
+                            <i class="fas fa-cart-plus"></i> Add Purchase
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="Modal.openSupplierTransaction('${supplier.id}', 'payment')">
+                            <i class="fas fa-indian-rupee-sign"></i> Record Payment
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="Modal.openAddSupplier('${supplier.id}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="Views.printSupplierLedger('${supplier.id}')">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="Views.exportSupplierCSV('${supplier.id}')">
+                            <i class="fas fa-file-csv"></i> Export CSV
+                        </button>
+                        <button class="btn btn-ghost btn-sm delete-btn" onclick="Views.confirmDeleteSupplier('${supplier.id}', '${escapeHtml(supplier.name)}')" style="color:var(--danger)">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+
+                // Transactions
+                const filter = document.getElementById('supTxFilter').value;
+                let txs = [...supplier.transactions].sort((a, b) => new Date(a.date) - new Date(b.date) || new Date(a.createdAt) - new Date(b.createdAt));
+                if (filter === 'purchase') txs = txs.filter(t => t.type === 'purchase');
+                if (filter === 'payment') txs = txs.filter(t => t.type === 'payment');
+
+                const tbody = document.getElementById('sup-tx-table-body');
+                const emptyEl = document.getElementById('sup-tx-empty');
+                const tableEl = document.getElementById('sup-tx-table-container');
+
+                if (!txs.length) {
+                    tableEl.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                } else {
+                    tableEl.style.display = 'block';
+                    emptyEl.style.display = 'none';
+                    let runningBalance = 0;
+                    tbody.innerHTML = txs.map((tx, idx) => {
+                        if (tx.type === 'purchase') runningBalance += tx.amount;
+                        else runningBalance -= tx.amount;
+                        const typeLabel = tx.type === 'purchase' ? 'Purchase' : 'Payment';
+                        const typeBadge = tx.type === 'purchase' ? 'purchase' : 'payment';
+                        const amtClass = tx.type === 'purchase' ? 'tx-credit' : 'tx-payment';
+                        return `
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td>${formatDate(tx.date)}</td>
+                                <td><span class="tx-type-badge ${typeBadge}"><i class="fas ${tx.type === 'purchase' ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${typeLabel}</span></td>
+                                <td class="${amtClass}">${tx.type === 'purchase' ? '+' : '-'}${formatCurrency(tx.amount)}</td>
+                                <td style="color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(tx.notes)}">${escapeHtml(tx.notes) || '—'}</td>
+                                <td><strong style="color:${runningBalance > 0 ? 'var(--credit-color)' : 'var(--payment-color)'}">${formatCurrency(runningBalance)}</strong></td>
+                                <td>
+                                    <div class="tx-actions">
+                                        <button title="Edit" onclick="event.stopPropagation(); Views.editSupplierTransaction('${supplier.id}', '${tx.id}')"><i class="fas fa-pen"></i></button>
+                                        <button title="Delete" class="delete-btn" onclick="event.stopPropagation(); Views.confirmDeleteSupplierTransaction('${supplier.id}', '${tx.id}', '${tx.type}', ${tx.amount})"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            },
+
+            printSupplierLedger(supplierId) {
+                const supplier = SupplierService.get(supplierId);
+                if (!supplier) return;
+                const balance = SupplierService.getBalance(supplier);
+                const txs = [...supplier.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                let runningBalance = 0;
+                const rows = txs.map((tx, idx) => {
+                    if (tx.type === 'purchase') runningBalance += tx.amount;
+                    else runningBalance -= tx.amount;
+                    return '<tr><td>' + (idx + 1) + '</td><td>' + formatDate(tx.date) + '</td><td>' + (tx.type === 'purchase' ? 'Purchase' : 'Payment') + '</td><td style="color:' + (tx.type === 'purchase' ? '#4361ee' : '#2d6a4f') + '">' + (tx.type === 'purchase' ? '+' : '-') + formatCurrency(tx.amount) + '</td><td>' + (escapeHtml(tx.notes) || '—') + '</td><td><strong>' + formatCurrency(runningBalance) + '</strong></td></tr>';
+                }).join('');
+
+                const win = window.open('', '_blank');
+                win.document.write('<!DOCTYPE html><html lang="en"><head><title>Supplier Ledger - ' + escapeHtml(supplier.name) + '</title><style>body{font-family:Arial,sans-serif;padding:30px;color:#333}h1{margin:0;font-size:1.4rem}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px 12px;text-align:left;font-size:0.85rem}th{background:#f5f5f5;font-weight:600}tr:nth-child(even){background:#fafafa}.meta{color:#666;margin-top:4px;font-size:0.9rem}.balance-box{margin-top:12px;font-size:1.1rem}</style></head><body><h1>Baakiluu — Supplier Ledger</h1><div class="meta"><strong>' + escapeHtml(supplier.name) + '</strong>' + (supplier.company ? ' | ' + escapeHtml(supplier.company) : '') + ' | Phone: ' + escapeHtml(supplier.phone) + ' | Printed: ' + formatDate(todayStr()) + '</div><div class="balance-box">Balance Payable: <strong style="color:' + (balance > 0 ? '#e63946' : '#2d6a4f') + '">' + formatCurrency(balance) + '</strong></div><table><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Amount</th><th>Notes</th><th>Balance</th></tr></thead><tbody>' + rows + '</tbody></table><script>window.print();<\/script></body></html>');
+                win.document.close();
+            },
+
+            exportSupplierCSV(supplierId) {
+                const supplier = SupplierService.get(supplierId);
+                if (!supplier) return;
+                const txs = [...supplier.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                let runningBalance = 0;
+                let csv = 'Sr No,Date,Type,Amount,Notes,Running Balance\n';
+                txs.forEach((tx, idx) => {
+                    if (tx.type === 'purchase') runningBalance += tx.amount;
+                    else runningBalance -= tx.amount;
+                    csv += (idx + 1) + ',' + tx.date + ',' + tx.type + ',' + tx.amount + ',"' + tx.notes.replace(/"/g, '""') + '",' + runningBalance.toFixed(2) + '\n';
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = supplier.name.replace(/\s+/g, '_') + '_supplier_ledger.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+                Toast.show('CSV exported');
+            },
+
+            confirmDeleteSupplier(supplierId, supplierName) {
+                Modal.openConfirm(
+                    'Delete Supplier',
+                    'Delete ' + supplierName + ' and all their transactions? This cannot be undone.',
+                    function() {
+                        SupplierService.delete(supplierId);
+                        Toast.show('Supplier deleted');
+                        window.location.hash = '#/suppliers';
+                    }
+                );
+            },
+
+            editSupplierTransaction(supplierId, txId) {
+                const supplier = SupplierService.get(supplierId);
+                if (!supplier) return;
+                const tx = supplier.transactions.find(t => t.id === txId);
+                if (!tx) return;
+                Modal.openSupplierTransaction(supplierId, tx.type, tx);
+            },
+
+            confirmDeleteSupplierTransaction(supplierId, txId, txType, txAmount) {
+                Modal.openConfirm(
+                    'Delete Transaction',
+                    'Delete this ' + txType + ' of ' + formatCurrency(txAmount) + '?',
+                    function() {
+                        SupplierTransactionService.delete(supplierId, txId);
+                        Toast.show('Transaction deleted');
+                        Router.render();
+                    }
+                );
+            }
+        };
+
+        /* =========================================================
+           ROUTER
+           ========================================================= */
+        const Router = {
+            currentView: null,
+            currentCustomerId: null,
+            currentSupplierId: null,
+            init() {
+                window.addEventListener('hashchange', () => this.route());
+                this.route();
+            },
+            route() {
+                const hash = window.location.hash || '#/';
+                // Hide all views
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                // Update nav
+                document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+
+                this.currentCustomerId = null;
+                this.currentSupplierId = null;
+
+                if (hash.startsWith('#/supplier/')) {
+                    const id = hash.split('#/supplier/')[1];
+                    this.currentView = 'supplier-detail';
+                    this.currentSupplierId = id;
+                    document.getElementById('view-supplier-detail').classList.add('active');
+                    document.querySelector('[data-nav="suppliers"]').classList.add('active');
+                    Views.supplierDetail(id);
+                } else if (hash === '#/suppliers') {
+                    this.currentView = 'suppliers';
+                    document.getElementById('view-suppliers').classList.add('active');
+                    document.querySelector('[data-nav="suppliers"]').classList.add('active');
+                    Views.suppliers();
+                } else if (hash.startsWith('#/customer/')) {
+                    const id = hash.split('#/customer/')[1];
+                    this.currentView = 'customer-detail';
+                    this.currentCustomerId = id;
+                    document.getElementById('view-customer-detail').classList.add('active');
+                    document.querySelector('[data-nav="customers"]').classList.add('active');
+                    Views.customerDetail(id);
+                } else if (hash === '#/customers') {
+                    this.currentView = 'customers';
+                    document.getElementById('view-customers').classList.add('active');
+                    document.querySelector('[data-nav="customers"]').classList.add('active');
+                    Views.customers();
+                } else if (hash === '#/settings') {
+                    this.currentView = 'settings';
+                    document.getElementById('view-settings').classList.add('active');
+                    document.querySelector('[data-nav="settings"]').classList.add('active');
+                } else {
+                    this.currentView = 'dashboard';
+                    document.getElementById('view-dashboard').classList.add('active');
+                    document.querySelector('[data-nav="dashboard"]').classList.add('active');
+                    Views.dashboard();
+                }
+
+                // Close mobile sidebar
+                App.closeSidebar();
+            },
+            render() {
+                if (this.currentView === 'dashboard') Views.dashboard();
+                else if (this.currentView === 'customers') Views.customers();
+                else if (this.currentView === 'customer-detail' && this.currentCustomerId) Views.customerDetail(this.currentCustomerId);
+                else if (this.currentView === 'suppliers') Views.suppliers();
+                else if (this.currentView === 'supplier-detail' && this.currentSupplierId) Views.supplierDetail(this.currentSupplierId);
+            }
+        };
+
+        /* =========================================================
+           APP CONTROLLER
+           ========================================================= */
+        const App = {
+            SIDEBAR_BREAKPOINT: 1024,
+            init() {
+                // Theme
+                const theme = DATA.settings.theme || 'light';
+                document.documentElement.setAttribute('data-theme', theme);
+                this.updateThemeIcon(theme);
+
+                // Theme toggle
+                document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
+
+                // Dynamic sidebar layout — no fixed media query
+                this.handleLayout();
+                window.addEventListener('resize', () => this.handleLayout());
+
+                // Hamburger
+                document.getElementById('hamburgerBtn').addEventListener('click', () => {
+                    document.getElementById('sidebar').classList.toggle('open');
+                    document.getElementById('sidebarBackdrop').classList.toggle('show');
+                });
+                document.getElementById('sidebarBackdrop').addEventListener('click', () => {
+                    this.closeSidebar();
+                });
+
+                // Search & sort — Customers
+                document.getElementById('customerSearch').addEventListener('input', () => Views.customers());
+                document.getElementById('customerSort').addEventListener('change', () => Views.customers());
+                document.getElementById('txFilter').addEventListener('change', () => Router.render());
+
+                // Search & sort — Suppliers
+                document.getElementById('supplierSearch').addEventListener('input', () => Views.suppliers());
+                document.getElementById('supplierSort').addEventListener('change', () => Views.suppliers());
+                document.getElementById('supTxFilter').addEventListener('change', () => Router.render());
+
+                // Router
+                Router.init();
+            },
+            handleLayout() {
+                const width = window.innerWidth;
+                const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+                if (width <= this.SIDEBAR_BREAKPOINT && !isCollapsed) {
+                    document.body.classList.add('sidebar-collapsed');
+                    this.closeSidebar();
+                } else if (width > this.SIDEBAR_BREAKPOINT && isCollapsed) {
+                    document.body.classList.remove('sidebar-collapsed');
+                    this.closeSidebar();
+                }
+            },
+            closeSidebar() {
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebarBackdrop').classList.remove('show');
+            },
+            toggleTheme() {
+                const current = document.documentElement.getAttribute('data-theme');
+                const next = current === 'light' ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', next);
+                DATA.settings.theme = next;
+                saveData();
+                this.updateThemeIcon(next);
+            },
+            updateThemeIcon(theme) {
+                const icon = document.querySelector('#themeToggle i');
+                icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+            },
+            exportData() {
+                const json = JSON.stringify(DATA, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `baakiluu_backup_${todayStr()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                Toast.show('Data exported successfully');
+            },
+            importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (!imported.customers || !Array.isArray(imported.customers)) {
+                            Toast.show('Invalid backup file', 'error');
+                            return;
+                        }
+                        if (!imported.suppliers) imported.suppliers = [];
+                        Modal.openConfirm('Import Data', 'This will replace ALL current data with the imported file (' + imported.customers.length + ' customers, ' + imported.suppliers.length + ' suppliers). Continue?', () => {
+                            DATA = imported;
+                            saveData();
+                            Toast.show('Imported ' + DATA.customers.length + ' customers, ' + DATA.suppliers.length + ' suppliers');
+                            Router.render();
+                        });
+                    } catch {
+                        Toast.show('Invalid JSON file', 'error');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            },
+            clearAllData() {
+                DATA = StorageService.getDefault();
+                saveData();
+                Toast.show('All data cleared');
+                window.location.hash = '#/';
+                Router.render();
+            }
+        };
+
+        // Initialize
+        App.init();
+    </script>
+</body>
+</html>
+
+
+
+
+
